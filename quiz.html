@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(135deg, #ffe4e1, #ffb6f0);
+      background-image: url(bglela.jpg);
       font-family: 'Comic Neue', cursive;
       color: #a83279;
       overflow-x: hidden;
@@ -55,7 +55,6 @@
     .top-right { top: 0; right: 0; }
     .bottom-left { bottom: 0; left: 0; }
     .bottom-right { bottom: 0; right: 0; }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -85,7 +84,7 @@
         <option value="5">Level 5: Tebakan Angka</option>
       </select>
       <br><br>
-      <button class="btn btn-start" onclick="startQuiz()">Mulai Quiz</button>
+      <button class="btn btn-start" onclick="startQuiz(); playClick();">Mulai Quiz</button>
     </div>
 
     <!-- Kotak Quiz -->
@@ -97,8 +96,12 @@
     </div>
   </div>
 
-  <!-- Suara Tepuk Tangan -->
+  <!-- Sound Effects -->
   <audio id="clapSound" src="tepuk.mp3" preload="auto"></audio>
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+  <audio id="wrongSound" src="salah.mp3" preload="auto"></audio>
+  <audio id="correctSound" src="benar.mp3" preload="auto"></audio>
+  <audio id="bgMusic" src="backsoundd.mp3" preload="auto" loop></audio>
 
   <script>
     const allQuestions = {
@@ -133,12 +136,40 @@
     let questions = [];
     let current = 0;
 
+    // Simpan benar/salah tiap soal, true = benar, false = salah
+    let userAnswers = [];
+
     const levelText = document.getElementById("level");
     const questionText = document.getElementById("question");
     const optionsBox = document.getElementById("options");
     const nextBtn = document.getElementById("nextBtn");
     const quizBox = document.getElementById("quiz-box");
+
     const clapSound = document.getElementById("clapSound");
+    const clickSound = document.getElementById("clickSound");
+    const wrongSound = document.getElementById("wrongSound");
+    const correctSound = document.getElementById("correctSound");
+    const bgMusic = document.getElementById("bgMusic");
+
+    function playClick() {
+      clickSound.currentTime = 0;
+      clickSound.play();
+    }
+
+    function playWrong() {
+      wrongSound.currentTime = 0;
+      wrongSound.play();
+    }
+
+    function playClap() {
+      clapSound.currentTime = 0;
+      clapSound.play();
+    }
+
+    function playCorrect() {
+      correctSound.currentTime = 0;
+      correctSound.play();
+    }
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -156,25 +187,32 @@
       shuffle(questions);
       current = 0;
 
+      userAnswers = new Array(questions.length).fill(false); // reset jawaban
+
       document.getElementById("levelSelectBox").classList.add("d-none");
       quizBox.classList.remove("d-none");
-      loadQuestion();
+      nextBtn.classList.add("d-none");
+      nextBtn.textContent = "Lanjut";
+
+      levelText.textContent = "Level " + selectedLevel;
+      showQuestion();
+      bgMusic.play();
     }
 
-    function loadQuestion() {
+    function showQuestion() {
       const q = questions[current];
-      levelText.textContent = `Level ${selectedLevel}`;
       questionText.textContent = q.question;
-      optionsBox.innerHTML = "";
-      nextBtn.classList.add("d-none");
 
-      q.options.forEach(opt => {
+      optionsBox.innerHTML = "";
+      q.options.forEach(option => {
         const btn = document.createElement("button");
-        btn.className = "btn btn-answer animate-fade";
-        btn.textContent = opt;
+        btn.className = "btn btn-answer";
+        btn.textContent = option;
         btn.onclick = () => checkAnswer(btn, q.answer);
         optionsBox.appendChild(btn);
       });
+
+      nextBtn.classList.add("d-none");
     }
 
     function checkAnswer(button, correct) {
@@ -184,34 +222,42 @@
         if (btn.textContent === correct) {
           btn.classList.add("btn-success");
         } else {
-          btn.classList.add("btn-secondary");
+          btn.classList.remove("btn-success");
         }
       });
 
       if (button.textContent === correct) {
-        nextBtn.classList.remove("d-none");
+        button.classList.add("btn-success");
+        playCorrect(); // suara benar hanya saat benar
+        userAnswers[current] = true;
       } else {
-        setTimeout(() => {
-          alert("Ups, salah jawaban. Mulai lagi ya!");
+        button.classList.add("btn-danger");
+        playWrong();
+        userAnswers[current] = false;
+      }
+
+      if (current < questions.length - 1) {
+        nextBtn.textContent = "Lanjut";
+        nextBtn.classList.remove("d-none");
+        nextBtn.onclick = () => {
+          current++;
+          showQuestion();
+        };
+      } else {
+        nextBtn.textContent = "Selesai";
+        nextBtn.classList.remove("d-none");
+        nextBtn.onclick = () => {
+          const allCorrect = userAnswers.length === questions.length && userAnswers.every(ans => ans === true);
+          if (allCorrect) {
+            playClap();
+            alert("🎉 Selamat! Kamu menjawab semua soal dengan benar! 🎉");
+          } else {
+            alert("Quiz selesai! Coba lagi untuk mendapatkan semua jawaban benar.");
+          }
           location.reload();
-        }, 800);
+        };
       }
     }
-
-    nextBtn.onclick = () => {
-      current++;
-      if (current < questions.length) {
-        loadQuestion();
-      } else {
-        // Putar suara tepuk tangan
-        clapSound.play();
-        quizBox.innerHTML = `
-          <h2 class="text-success">🎉 Selamat!</h2>
-          <p>Kamu berhasil menyelesaikan semua soal di level ini!</p>
-          <a href="" class="btn btn-next mt-3">Coba Level Lain</a>
-        `;
-      }
-    };
   </script>
 </body>
 </html>
